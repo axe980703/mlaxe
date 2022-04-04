@@ -2,3 +2,5 @@
 .vscode
 __pycache__
 evaluate.py
+dist
+mlaxe.egg-info
