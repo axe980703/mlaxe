@@ -3,4 +3,6 @@
 __pycache__
 evaluate.py
 dist
+build
 mlaxe.egg-info
+__init__.py
