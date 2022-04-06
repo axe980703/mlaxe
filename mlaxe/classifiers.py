@@ -13,16 +13,16 @@ class SGDLinearClassifier:
 
     Parameters
     ----------
-    lr_init : float (default: 0.006)
+    lr_init: float (default: 0.006)
         Initial learning rate of sgd.
 
-    upd_rate : float (deafult: 0.1)
+    upd_rate: float (deafult: 0.1)
         Update rate of empirical risk on each iteration (0 <= val <= 1).
 
-    max_iter : int (default: 10000)
+    max_iter: int (default: 10000)
         Upper bound of maximum number of iterations.
 
-    loss_eps : float (default: 1e-7)
+    loss_eps: float (default: 1e-7)
         Stop criterion. Fitting will be stopped when
         condition: (loss - min_loss <= loss_eps) is true
         for (tol_iter) consecutive iterations.
@@ -93,6 +93,9 @@ class SGDLinearClassifier:
         if self._add_bias:
             x = np.hstack([x, np.ones((self._n_objects, 1))])
 
+        # init shuffle
+        x, y = self._shuffle_objects(x, y)
+
         # init weights with gaussian standard distribution
         w = np.random.randn(self._n_features + 1)
 
@@ -106,8 +109,7 @@ class SGDLinearClassifier:
         while iter_step < self._max_iter:
 
             if self._shuffle:
-                shuffle_perm = np.random.permutation(self._n_objects)
-                x, y = x[shuffle_perm], y[shuffle_perm]
+                x, y = self._shuffle_objects(x, y)
 
             # picking random index for current object
             i = np.random.randint(0, self._n_objects)
@@ -208,6 +210,11 @@ class SGDLinearClassifier:
         if self._converge_streak == self._tol_iter:
             return True
         return False
+
+
+    def _shuffle_objects(self, x, y):
+        shuffle_perm = np.random.permutation(self._n_objects)
+        return x[shuffle_perm], y[shuffle_perm]
 
 
     @staticmethod

@@ -1,8 +1,6 @@
 .venv
 .vscode
 __pycache__
-evaluation/
-evaluate.py
 dist
 build
 mlaxe.egg-info
