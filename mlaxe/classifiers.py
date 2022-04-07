@@ -123,7 +123,7 @@ class SGDLinearClassifier:
                 x, y = self._shuffle_objects(x, y)
 
             # picking random index for current object
-            i = np.random.randint(0, self._n_objects)
+            i = self._rand_gen.randint(0, self._n_objects)
 
             # calulating loss on current object
             iter_loss = self._loss(x[i], y[i], w)
