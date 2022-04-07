@@ -18,7 +18,7 @@ class Sample2D:
     classes: int (default: 2)
         Number of classes to create.
 
-    radius: float (deafult:5)
+    radius: float (deafult: 5)
         The radius of circumference on which the centers of classes lie.
 
     mean: float (default: 0)

@@ -1,5 +1,5 @@
 from mlaxe.classifiers import SGDLinearClassifier
-from evaluation.sample import Sample2D
+from mlaxe.sample import Sample2D
 
 
 x, y = Sample2D(classes=2, radius=7, mean=0,
@@ -7,4 +7,5 @@ x, y = Sample2D(classes=2, radius=7, mean=0,
 
 cls = SGDLinearClassifier(tol_iter=20)
 cls.fit(x, y)
+
 print(cls.evaluate(x, y))
