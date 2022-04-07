@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import animation, rc
+from mlaxe.math import _Loss, _MovAvg
 
 
 class SGDLinearClassifier:
@@ -56,7 +57,7 @@ class SGDLinearClassifier:
     def __init__(self, lr_init=0.006, upd_rate=0.1, max_iter=10000,
                  loss_eps=1e-5, tol_iter=5, add_bias=True,
                  save_hist=True, verbose=False, shuffle=False,
-                 mov_avg='exp', loss_func='relu'):
+                 mov_avg='exp', loss_func='relu', seed=322):
 
         self._lr_init = lr_init
         self._upd_rate = upd_rate
@@ -67,28 +68,38 @@ class SGDLinearClassifier:
         self._save_hist = save_hist
         self._verbose = verbose
         self._shuffle = shuffle
+        self._seed = seed
         self._weights_hist = []
         self._grad_hist = []
 
         # select functions, corresponding to received parameters
-
-        self._update_risk = self._MovAvg(mov_avg).get_update_method()
-        self._loss, self._grad = self._Loss(loss_func).get_loss_grad_methods()
+        self._update_risk = _MovAvg(mov_avg).get_update_method()
+        self._loss, self._grad = _Loss(loss_func).get_loss_grad_methods()
 
 
     def fit(self, x, y):
         """
+        Fits linear classifier using Stochastic Gradient Descent.
+        Empirical risk is updating its value by moving average.
+        The partial derivatives for each loss function already
+        specified in _Loss class and stored as _grad attribute.
+
         Parameters
         ----------
-        x: feature_data (2D numpy-like array)
+        x: feature data (2D numpy-like array)
 
-        y: label_data (1D numpy-like array)
+        y: label data (1D numpy-like array)
+
+        Returns
+        ----------
+        self: the current instance of class
 
         """
 
         self._n_objects = x.shape[0]
         self._n_features = x.shape[1]
         self._converge_streak = 0
+        self._rand_gen = np.random.RandomState(self._seed)
 
         if self._add_bias:
             x = np.hstack([x, np.ones((self._n_objects, 1))])
@@ -97,7 +108,7 @@ class SGDLinearClassifier:
         x, y = self._shuffle_objects(x, y)
 
         # init weights with gaussian standard distribution
-        w = np.random.randn(self._n_features + 1)
+        w = self._rand_gen.randn(self._n_features + 1)
 
 
         # init local variables
@@ -149,12 +160,17 @@ class SGDLinearClassifier:
         self.weights = w
         self.iters = iter_step
 
+        return self
+
 
     def predict(self, x):
         """
+        Predicts class labels for provided feature data.
+        If _add_bias flag is specified, column of ones will be added.
+
         Parameters
         ----------
-        x: feature_data (2D numpy-like array)
+        x: feature data (2D numpy-like array)
 
         Returns
         ----------
@@ -167,21 +183,25 @@ class SGDLinearClassifier:
         if self._add_bias:
             x = np.hstack([x, np.ones((self._n_objects, 1))])
 
-        return np.sign(np.sum(x * self.weights, axis=1))
+        y = np.sign(np.sum(x * self.weights, axis=1))
 
+        return y
 
 
     def evaluate(self, x, y):
         """
+        Calculates accuracy (the ratio of the number of objects
+        with correct predicted classes to the total number of objects).
+
         Parameters
         ----------
-        x: feature_data (2D numpy-like array)
+        x: feature data (2D numpy-like array)
 
-        y: label_data (1D numpy-like array)
+        y: label data (1D numpy-like array)
 
         Returns
         ----------
-        acc: accuracy of number of correct predicted classes
+        acc: accuracy of number of correct predicted classes (float)
 
         """
 
@@ -194,91 +214,100 @@ class SGDLinearClassifier:
 
 
     def _empirical_risk(self, x, y, w):
+        """
+        Calculates the value of empirical risk for
+        specified sample data.
+
+        Parameters
+        ----------
+        x: feature data (2D numpy-like array)
+
+        y: label data (1D numpy-like array)
+
+        w: weights (coefficients) of linear decision
+           function (1D numpy-like array)
+
+        Returns
+        ----------
+        risk: value of empirical risk (float)
+
+        """
+
         ws, y = np.expand_dims(w, axis=0), np.expand_dims(y, axis=-1)
         ws = np.repeat(ws, self._n_objects, axis=0)
         loss = np.vectorize(self._loss)
+        risk = np.sum(loss(x, y, ws)) / self._n_objects
 
-        return np.sum(loss(x, y, ws))
+        return risk
 
 
     def _time_to_stop(self, cur_risk, min_risk):
+        """
+        Checks if the convergence condition is already satisfied or not.
+        Also, it updates convergence-control variables.
+
+        Parameters
+        ----------
+        cur_risk: the risk value on the current iteration (float)
+
+        min_risk: the minimal risk value during fitting process (float)
+
+        Returns
+        ----------
+        to_stop: stop indicator (bool)
+
+        """
+
         if abs(cur_risk - min_risk) < self._loss_eps:
             self._converge_streak += 1
         else:
             self._converge_streak = 0
 
-        if self._converge_streak == self._tol_iter:
-            return True
-        return False
+        to_stop = (self._converge_streak == self._tol_iter)
+
+        return to_stop
 
 
     def _shuffle_objects(self, x, y):
-        shuffle_perm = np.random.permutation(self._n_objects)
-        return x[shuffle_perm], y[shuffle_perm]
+        """
+        Shuffles fitting data randomly.
+
+        Parameters
+        ----------
+        x: feature data (2D numpy-like array)
+
+        y: label data (1D numpy-like array)
+
+        Returns
+        ----------
+        x, y: shuffled sample data (tuple)
+
+        """
+
+        shuffle_perm = self._rand_gen.permutation(self._n_objects)
+        x, y = x[shuffle_perm], y[shuffle_perm]
+
+        return x, y
 
 
     @staticmethod
     def _update_l_rate(l_rate, iter_step):
-        next_lr = 1 / (1 + iter_step)
+        """
+        Updates learning rate according to the rules
+        specified at the parameters.
 
-        return min(l_rate, next_lr)
+        Parameters
+        ----------
+        l_rate: current learning rate (float)
 
+        iter_step: number of iteration (int)
 
+        Returns
+        ----------
+        next_lr: updated learning rate (float)
 
-    class _Loss:
-        def __init__(self, loss_name: str):
-            self.func = getattr(self, f'func_{loss_name}')
-            self.grad = getattr(self, f'grad_{loss_name}')
+        """
 
+        next_lr = min(l_rate, 1 / (1 + iter_step))
 
-        def get_loss_grad_methods(self):
-            return self.func, self.grad
-
-
-        @staticmethod
-        def func_relu(x, y, w):
-            margin = np.dot(x, w) * y
-
-            if margin >= 0:
-                return 0
-            return -margin
-
-
-        @staticmethod
-        def grad_relu(x, y, w):
-            n_features = x.shape[0]
-            margin = np.dot(x, w) * y
-
-            if margin >= 0:
-                return np.zeros(n_features)
-            return x * (-y)
-
-
-        @staticmethod
-        def func_log(x, y, w):
-            pass
-
-
-        @staticmethod
-        def grad_log(x, y, w):
-            pass
-
-
-
-    class _MovAvg:
-        def __init__(self, mavg_name: str):
-            self.update_risk = getattr(self, f'update_{mavg_name}')
-
-
-        def get_update_method(self):
-            return self.update_risk
-
-
-        @staticmethod
-        def update_exp(risk, loss, upd_rate):
-            return upd_rate * loss + (1 - upd_rate) * risk
-
-
-        @staticmethod
-        def update_mean(x, y, w):
-            pass
+        return next_lr
