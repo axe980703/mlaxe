@@ -1,3 +1,9 @@
+"""
+This module contains classifiers with
+linear decision function.
+
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import animation, rc
@@ -9,6 +15,7 @@ class SGDLinearClassifier:
     The Class implements binary classification with a linear decision function.
     It provides set of loss functions to choose.
     Weights by default initialized with standard gaussian random values.
+    The value of empirical risk is updated using the moving average.
     Learning rate by default decreases.
     Description is expanding..
 
@@ -58,6 +65,11 @@ class SGDLinearClassifier:
                  loss_eps=1e-5, tol_iter=5, add_bias=True,
                  save_hist=True, verbose=False, shuffle=False,
                  mov_avg='exp', loss_func='relu', seed=322):
+        """
+        Initializes private attributes of the class with
+        corresponding values (if specified) from arguments.
+
+        """
 
         self._lr_init = lr_init
         self._upd_rate = upd_rate
@@ -73,8 +85,10 @@ class SGDLinearClassifier:
         self._grad_hist = []
 
         # select functions, corresponding to received parameters
-        self._update_risk = _MovAvg(mov_avg).get_update_method()
-        self._loss, self._grad = _Loss(loss_func).get_loss_grad_methods()
+        loss_select, mavg_select = _Loss(loss_func), _MovAvg(mov_avg)
+        self._update_risk = mavg_select.get_update_func()
+        self._loss = loss_select.get_loss_func()
+        self._grad = loss_select.get_grad_func()
 
 
     def fit(self, x, y):
@@ -96,6 +110,7 @@ class SGDLinearClassifier:
 
         """
 
+        # init private attributes
         self._n_objects = x.shape[0]
         self._n_features = x.shape[1]
         self._converge_streak = 0
@@ -108,6 +123,7 @@ class SGDLinearClassifier:
         x, y = self._shuffle_objects(x, y)
 
         # init weights with gaussian standard distribution
+        # as an 
         w = self._rand_gen.randn(self._n_features + 1)
 
 
@@ -150,7 +166,7 @@ class SGDLinearClassifier:
                 break
 
             # changing learning rate
-#             l_rate = self._update_l_rate(l_rate, iter_step)
+            # l_rate = self._update_l_rate(l_rate, iter_step)
 
             # updating iteration's variables
             min_risk = min(min_risk, cur_risk)
