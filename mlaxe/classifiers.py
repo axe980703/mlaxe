@@ -123,7 +123,6 @@ class SGDLinearClassifier:
         x, y = self._shuffle_objects(x, y)
 
         # init weights with gaussian standard distribution
-        # as an 
         w = self._rand_gen.randn(self._n_features + 1)
 
 
