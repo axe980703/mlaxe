@@ -7,10 +7,11 @@ linear decision function.
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import animation, rc
+from mlaxe.standards import BaseLinearClassifier
 from mlaxe.math import _Loss, _MovAvg
 
 
-class SGDLinearClassifier:
+class SGDLinearClassifier(BaseLinearClassifier):
     """
     The Class implements binary classification with a linear decision function.
     It provides set of loss functions to choose.
