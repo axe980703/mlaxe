@@ -4,6 +4,7 @@ which displays process of fitting.
 
 """
 
+import numpy as np
 from itertools import cycle
 
 
@@ -14,19 +15,25 @@ class SampleDisplayMixin:
 
     """
 
-    def draw_sample(self, xs, ys, ax):
+    @staticmethod
+    def draw_sample(xs, ys, ax):
         """
         Visualizes the sample on 2D-plane.
+        The input sample must have equal
+        number of objects in each class.
 
         Parameters
         ----------
         xs: feature data (2D numpy-like array)
 
-        ys: label data (2D numpy-like array)
+        ys: label data (1D numpy-like array)
 
         ax: axes to plot on (axes-object matplotlib)
 
         """
+
+        # determine number of classes
+        n_classes = np.unique(ys).shape[0]
 
         # initialize color array
         colors = list('bgrcmyk') + ['purple', 'lime', 'olive', 'pink',
@@ -34,13 +41,13 @@ class SampleDisplayMixin:
 
         # cycle array of colors
         cycler = cycle(colors)
-        colors = [next(cycler) for _ in range(self.classes)]
+        colors = [next(cycler) for _ in range(n_classes)]
 
         # set figure size for plotting
         ax.figure(figsize=(7, 5))
 
-        xs = xs.reshape(self.classes, -1, 2)
-        ys = ys.reshape(self.classes, -1)
+        xs = xs.reshape(n_classes, -1, 2)
+        ys = ys.reshape(n_classes, -1)
 
         # plot each class, pointing label and color values
         for x, y, clr in zip(xs, ys, colors):
@@ -48,3 +55,7 @@ class SampleDisplayMixin:
 
         ax.legend()
         ax.show()
+
+
+class Animation(SampleDisplayMixin):
+    pass
