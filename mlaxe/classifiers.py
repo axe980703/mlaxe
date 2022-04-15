@@ -362,20 +362,17 @@ class SGDLinearClassifier(BaseLinearClassifier):
         return next_lr
 
 
-    def get_anim(self, verbose=True):
+    def get_anim(self, save_gif=True, verbose=True):
         """
         Creates animation of fitting process.
 
         Parameters
         ----------
+        save_gif: bool
+            Whether to save .gif file or not.
+
         verbose: bool
             Whether to display process of animating or not.
-
-        ...
-
-        Returns
-        ----------
-        anim_out: created animation
 
         """
 
@@ -383,7 +380,8 @@ class SGDLinearClassifier(BaseLinearClassifier):
             sample=(self._xs, self._ys),
             weights=self._weights_hist,
             grads=self._grad_hist,
-            verbose=verbose
+            verbose=verbose,
+            save_gif=save_gif
         )
 
         anim.build_animation()

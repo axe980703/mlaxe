@@ -8,4 +8,4 @@ x, y = Sample2D(classes=2, radius=10, mean=0,
 
 cls = SGDLinearClassifier(tol_iter=20, seed=1).fit(x, y)
 cls.evaluate(x, y)
-cls.get_anim()
+cls.get_anim(save_gif=True)
