@@ -5,15 +5,14 @@ linear decision function.
 """
 
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib import animation, rc
 from mlaxe.standards import BaseLinearClassifier
 from mlaxe.math import _Loss, _MovAvg
+from mlaxe.visual import Animation
 
 
 class SGDLinearClassifier(BaseLinearClassifier):
     """
-    The Class implements binary classification with a linear decision function.
+    The class implements binary classification with a linear decision function.
     It provides set of loss functions to choose.
     Weights by default initialized with standard gaussian random values.
     The value of empirical risk is updated using the moving average.
@@ -116,6 +115,9 @@ class SGDLinearClassifier(BaseLinearClassifier):
         self._n_features = x.shape[1]
         self._converge_streak = 0
         self._rand_gen = np.random.RandomState(self._seed)
+
+        if self._save_hist:
+            self._xs, self._ys = x, y
 
         if self._add_bias:
             x = np.hstack([x, np.ones((self._n_objects, 1))])
@@ -327,3 +329,29 @@ class SGDLinearClassifier(BaseLinearClassifier):
         next_lr = min(l_rate, 1 / (1 + iter_step))
 
         return next_lr
+
+
+    def get_anim(self, verbose=True):
+        """
+        Creates animation of fitting process.
+
+        Parameters
+        ----------
+        verbose: whether to display process of animating or not (bool)
+
+        iter_step: number of iteration (int)
+
+        Returns
+        ----------
+        anim_out: created animation
+
+        """
+
+        anim = Animation(
+            sample=(self._xs, self._ys),
+            weights=self._weights_hist,
+            grads=self._grad_hist,
+            verbose=verbose
+        )
+
+        anim.build_animation()

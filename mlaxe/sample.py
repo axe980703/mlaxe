@@ -6,7 +6,6 @@ your task.
 
 """
 
-from itertools import cycle
 import numpy as np
 import matplotlib.pyplot as plt
 from mlaxe.visual import SampleDisplayMixin
@@ -103,6 +102,10 @@ class Sample2D(SampleDisplayMixin):
             ys = np.repeat(np.arange(self.classes), self.cl_size)
 
         # visualize created sample
+        plt.figure(figsize=(9, 6))
         self.draw_sample(xs, ys, plt)
+        plt.title(f'Generated sample for {self.classes} classes')
+        plt.legend()
+        plt.show()
 
         return xs, ys
