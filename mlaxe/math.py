@@ -17,18 +17,18 @@ class _Loss:
     the class, you will be able to get corresponding
     functions by using 'get_loss(grad)_func' methods.
 
-    Parameters
-    ----------
-    loss_name: str
-        The name of the loss function.
-        The list of valid names: ['relu', 'log']
-
     """
 
     def __init__(self, loss_name: str):
         """
         Initializes class public attributes
         with static methods, using getattr method.
+
+        Parameters
+        ----------
+        loss_name: str
+            The name of the loss function.
+            The list of valid names: ['relu', 'log']
 
         """
 
@@ -37,12 +37,12 @@ class _Loss:
 
 
     def get_loss_func(self):
-        """ Getter of loss function"""
+        """ Getter of loss function """
         return self._loss
 
 
     def get_grad_func(self):
-        """ Getter of grad function"""
+        """ Getter of grad function """
         return self._grad
 
 
@@ -107,18 +107,18 @@ class _MovAvg:
     creating instance of the class, you will be able to
     get the function by using 'get_update_func' method.
 
-    Parameters
-    ----------
-    mavg_name: str
-        The name of the moving average.
-        The list of valid names: ['exp', 'mean']
-
     """
 
     def __init__(self, mavg_name: str):
         """
         Initializes class public attributes
         with static methods, using getattr method.
+
+        Parameters
+        ----------
+        mavg_name: str
+            The name of the moving average.
+            The list of valid names: ['exp', 'mean'].
 
         """
 

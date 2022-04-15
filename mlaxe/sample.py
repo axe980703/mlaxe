@@ -21,7 +21,7 @@ class Sample2D(SampleDisplayMixin):
     origin, and they lie on the circumference with radius,
     which specified in parameters.
 
-    Parameters
+    Attributes
     ----------
     classes: int (default: 2)
         Number of classes to create.
@@ -66,7 +66,8 @@ class Sample2D(SampleDisplayMixin):
 
         Returns
         ----------
-        xs, ys: features and labels numpy-like arrays (tuple)
+        xs, ys: tuple of (2D, 1D) numpy-like arrays
+            Feature and label data.
 
         """
 

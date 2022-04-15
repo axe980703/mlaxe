@@ -26,11 +26,14 @@ class SampleDisplayMixin:
 
         Parameters
         ----------
-        xs: feature data (2D numpy-like array)
+        xs: 2D numpy-like array
+            Feature data.
 
-        ys: label data (1D numpy-like array)
+        ys: 1D numpy-like array
+            Dabel data.
 
-        ax: axes to plot on (axes-object matplotlib)
+        ax: Axes
+            Axes to plot on.
 
         """
 
@@ -55,6 +58,22 @@ class SampleDisplayMixin:
 
     @staticmethod
     def zoom_axes(ax, ratio):
+        """
+        Zooms in/out limits of axes, according
+        to ratio value.
+
+        Parameters
+        ----------
+        ax: Axes
+            Axes to plot on.
+
+        ratio: float
+            The coefficient of zoom.
+            if ratio >= 1: the greater, the closer.
+            if ratio < 1: the smaller, the farther.
+
+        """
+
         xe, xb = ax.get_xlim()
         ye, yb = ax.get_ylim()
 
@@ -70,19 +89,16 @@ class Animation(SampleDisplayMixin):
     This class implements the animation rendering
     of process of fitting.
 
-    Parameters
+    Attributes
     ----------
-    classes: int (default: 2)
-        Number of classes to create.
+    sample: tuple of (2D, 1D) numpy-like arrays
+        Sample data.
 
-    radius: float (deafult: 5)
-        The radius of circumference on which the centers of classes lie.
+    weights: 2D numpy-like array
+        The history of weights saved while fitting.
 
-    mean: float (default: 0)
-        Mean parameter of normal distributed variable.
-
-    fig_size: 2-elements tuple (default: (9, 6))
-        Size of window for plotting.
+    grads: 2D numpy-like array
+        The history of gradients saved while fitting.
 
     save_gif: bool (default: False)
         Whether to save animation as .gif file.
@@ -93,7 +109,7 @@ class Animation(SampleDisplayMixin):
     """
 
     def __init__(self, sample, weights, grads,
-                 verbose=False, save_gif=False):
+                 save_gif=False, verbose=False):
         """
         Initializes attributes of the class with
         corresponding values (if specified) from arguments.
@@ -103,17 +119,23 @@ class Animation(SampleDisplayMixin):
         self.xs, self.ys = sample
         self.weights = weights
         self.grads = grads
-
         self.verbose = verbose
         self.save_gif = save_gif
+
+        # setup plotting parameters
         self.congif()
 
 
     def congif(self):
+        """ Setting up all necessary objects for plotting """
+
         rc('animation', html='html5')
+
+        # creating subplots and grid
         self.fig, self.ax = plt.subplots(figsize=(9, 6))
         self.x_grid = np.linspace(-10, 10, 5)
 
+        # creating objects for line and text
         self.line = self.ax.plot([], [], lw=2, color='red')[0]
         self.text = self.ax.text(
             0.95, 0.05, '', verticalalignment='bottom',
@@ -121,11 +143,14 @@ class Animation(SampleDisplayMixin):
             color='brown', fontsize=12
         )
 
+        # saving frames count and initializing iterations count
         self.n_frames = len(self.weights)
         self.iter = 0
 
 
     def pre_anim(self):
+        """ The method which is called before animating. """
+
         self.draw_sample(self.xs, self.ys, self.ax)
         self.line.set_xdata(self.x_grid)
 
@@ -133,39 +158,69 @@ class Animation(SampleDisplayMixin):
 
 
     def animate(self, i: int):
+        """
+        The method which is called to render each frame
+        of animation.
+
+        Parameters
+        ----------
+        i: int
+            Iteration (frame) number.
+
+        """
+
+        # getting simple links to variables
         w = self.weights[i]
         g = self.grads[i]
-        xs = self.x_grid
-        ys = (w[2] + w[0] * xs) / -w[1]
 
+        # getting the abscissas grid
+        x = self.x_grid
+
+        # calculating the ordinate of decision function
+        y = (w[2] + w[0] * x) / -w[1]
+
+        # printing and updating status of animation
         self.iter += 1
 
         if self.iter <= self.n_frames:
             status = f'Animating {self.iter / self.n_frames * 100:.2f}%'
             print(status + '\r', end='')
 
+        # displaying of weights/grads changes through fit iterations
         info = (f'weights: {w[0]:.3f}  {w[1]:.3f}  {w[2]:.3f}\n'
                 f'gradient: {g[0]:.3f}  {g[1]:.3f}  {g[2]:.3f}')
         self.text.set_text(info)
 
-        self.line.set_ydata(ys)
+        self.line.set_ydata(y)
 
         return (self.line, self.text)
 
 
     def build_animation(self):
+        """
+        The method that launches the animating process.
+
+        """
+
+        # creating the instance of FuncAnimation
+        # using optimal parameters
         anim = animation.FuncAnimation(
             self.fig, self.animate, init_func=self.pre_anim,
             interval=7, blit=True, frames=self.n_frames,
             repeat=False
         )
 
+        # plotting sample
         self.draw_sample(self.xs, self.ys, self.ax)
         self.ax.set_title(f'Process of fitting')
         self.ax.legend(loc='upper right')
+
+        # zooming limits of plot
         self.zoom_axes(self.ax, 1.2)
         plt.show()
 
+        # save .gif file of animation
+        # if corresponding parameter is true.
         if self.save_gif:
             writergif = animation.PillowWriter(fps=30)
             anim.save('out.gif', writer=writergif)

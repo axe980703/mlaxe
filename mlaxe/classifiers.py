@@ -19,45 +19,14 @@ class SGDLinearClassifier(BaseLinearClassifier):
     Learning rate by default decreases.
     Description is expanding..
 
-    Parameters
+    Attributes
     ----------
-    lr_init: float (default: 0.006)
-        Initial learning rate of sgd.
+    weights: numpy-like array
+        Vector of coeffitients of linear decision function.
+        Shape of array equal to (n_features + 1,).
 
-    upd_rate: float (deafult: 0.1)
-        Update rate of empirical risk on each iteration (0 <= val <= 1).
-
-    max_iter: int (default: 10000)
-        Upper bound of maximum number of iterations.
-
-    loss_eps: float (default: 1e-7)
-        Stop criterion. Fitting will be stopped when
-        condition: (loss - min_loss <= loss_eps) is true
-        for (tol_iter) consecutive iterations.
-
-    tol_iter: int (default: 5)
-        Number of iterations to wait before fitting will be stopped.
-
-    add_bias: bool (default: True)
-        Whether to add bias coefficient to weights vector or not.
-
-    save_hist: bool (default: True)
-        Whether to log all weights and gradients states during fitting or not.
-
-    verbose: bool (default: False)
-        Whether to print out the process of fitting or not.
-
-    shuffle: bool (default: False)
-        Whether to shuffle feature data after each iteration or not.
-
-    mov_avg: str (default: 'exp')
-        Type of moving average to use ('exp' - exponential,
-        'mean'- mean) for emperical risk re-calculation.
-
-    loss_func: str (default: 'relu')
-        Target loss function, for which we minimize empirical risk.
-        If parameter set to 'relu', f(x) = max(0, -x) will be used.
-        If parameter set to 'log', f(x) = log2(1 + e^(-x)) will be used.
+    iter_spent: int
+        Number of iterations spent before convergence.
 
     """
 
@@ -66,8 +35,50 @@ class SGDLinearClassifier(BaseLinearClassifier):
                  save_hist=True, verbose=False, shuffle=False,
                  mov_avg='exp', loss_func='relu', seed=322):
         """
-        Initializes private attributes of the class with
-        corresponding values (if specified) from arguments.
+        Initializes parameters of the model.
+
+        Parameters
+        ----------
+        lr_init: float (default: 0.006)
+            Initial learning rate of sgd.
+
+        upd_rate: float (deafult: 0.1)
+            Update rate of empirical risk on each iteration.
+            In interval : 0 <= val <= 1.
+
+        max_iter: int (default: 10000)
+            Upper bound of maximum number of iterations.
+
+        loss_eps: float (default: 1e-7)
+            Stop criterion. Fitting will be stopped when
+            condition: (loss - min_loss <= loss_eps) is true
+            for (tol_iter) consecutive iterations.
+
+        tol_iter: int (default: 5)
+            Number of iterations to wait before stop fitting.
+
+        add_bias: bool (default: True)
+            Whether to add bias to sample by concatenating
+            column of ones or not.
+
+        save_hist: bool (default: True)
+            Whether to log all weights and gradients states
+            during fitting or not.
+
+        verbose: bool (default: False)
+            Whether to print out the process of fitting or not.
+
+        shuffle: bool (default: False)
+            Whether to shuffle feature data after each iteration or not.
+
+        mov_avg: str (default: 'exp')
+            Type of moving average to use ('exp' - exponential,
+            'mean'- mean) for emperical risk re-calculation.
+
+        loss_func: str (default: 'relu')
+            Target loss function, for which we minimize empirical risk.
+            For 'relu', f(x) = max(0, -x) will be used.
+            For 'log', f(x) = log2(1 + e^(-x)) will be used.
 
         """
 
@@ -100,13 +111,16 @@ class SGDLinearClassifier(BaseLinearClassifier):
 
         Parameters
         ----------
-        x: feature data (2D numpy-like array)
+        x: 2D numpy-like array
+            Feature data.
 
-        y: label data (1D numpy-like array)
+        y: 1D numpy-like array
+            Label data.
 
         Returns
         ----------
-        self: the current instance of class
+        self: SGDLinearClassifier
+            The current instance of class.
 
         """
 
@@ -176,7 +190,7 @@ class SGDLinearClassifier(BaseLinearClassifier):
 
         # saving final weights as an attribute
         self.weights = w
-        self.iters = iter_step
+        self.iter_spent = iter_step
 
         return self
 
@@ -188,11 +202,13 @@ class SGDLinearClassifier(BaseLinearClassifier):
 
         Parameters
         ----------
-        x: feature data (2D numpy-like array)
+        x: 2D numpy-like array
+            Feature data.
 
         Returns
         ----------
-        y: predicted labels of classes (1D numpy-like array)
+        y: 1D numpy-like array
+            Predicted labels of classes.
 
         """
 
@@ -213,13 +229,16 @@ class SGDLinearClassifier(BaseLinearClassifier):
 
         Parameters
         ----------
-        x: feature data (2D numpy-like array)
+        x: 2D numpy-like array
+            Feature data.
 
-        y: label data (1D numpy-like array)
+        y: 1D numpy-like array
+            Label data.
 
         Returns
         ----------
-        acc: accuracy of number of correct predicted classes (float)
+        acc: float
+            Accuracy of number of correct predicted classes.
 
         """
 
@@ -238,16 +257,19 @@ class SGDLinearClassifier(BaseLinearClassifier):
 
         Parameters
         ----------
-        x: feature data (2D numpy-like array)
+        x: 2D numpy-like array
+            Feature data.
 
-        y: label data (1D numpy-like array)
+        y: 1D numpy-like array
+            Label data.
 
-        w: weights (coefficients) of linear decision
-           function (1D numpy-like array)
+        w: 1D numpy-like array
+            Weights of linear decision function.
 
         Returns
         ----------
-        risk: value of empirical risk (float)
+        risk: float
+            Value of empirical risk.
 
         """
 
@@ -266,13 +288,16 @@ class SGDLinearClassifier(BaseLinearClassifier):
 
         Parameters
         ----------
-        cur_risk: the risk value on the current iteration (float)
+        cur_risk: float
+            The risk value on the current iteration.
 
-        min_risk: the minimal risk value during fitting process (float)
+        min_risk: float
+            The minimal risk value during fitting process.
 
         Returns
         ----------
-        to_stop: stop indicator (bool)
+        to_stop: bool
+            Stop indicator.
 
         """
 
@@ -292,13 +317,16 @@ class SGDLinearClassifier(BaseLinearClassifier):
 
         Parameters
         ----------
-        x: feature data (2D numpy-like array)
+        x: 2D numpy-like array
+            Feature data.
 
-        y: label data (1D numpy-like array)
+        y: 1D numpy-like array
+            Label data.
 
         Returns
         ----------
-        x, y: shuffled sample data (tuple)
+        x, y: tuple of (2D, 1D) numpy-like arrays
+            Shuffled sample data.
 
         """
 
@@ -316,13 +344,16 @@ class SGDLinearClassifier(BaseLinearClassifier):
 
         Parameters
         ----------
-        l_rate: current learning rate (float)
+        l_rate: float
+            Current learning rate.
 
-        iter_step: number of iteration (int)
+        iter_step: float
+            Number of iteration.
 
         Returns
         ----------
-        next_lr: updated learning rate (float)
+        next_lr: float
+            Updated learning rate.
 
         """
 
@@ -337,9 +368,10 @@ class SGDLinearClassifier(BaseLinearClassifier):
 
         Parameters
         ----------
-        verbose: whether to display process of animating or not (bool)
+        verbose: bool
+            Whether to display process of animating or not.
 
-        iter_step: number of iteration (int)
+        ...
 
         Returns
         ----------
