@@ -28,7 +28,7 @@ class _Loss:
         ----------
         loss_name: str
             The name of the loss function.
-            The list of valid names: ['relu', 'log']
+            The list of valid names: ['hebb', 'hinge', 'log']
 
         """
 
@@ -47,9 +47,9 @@ class _Loss:
 
 
     @staticmethod
-    def loss_relu(x, y, w):
+    def loss_hebb(x, y, w):
         """
-        This is implementation of 'relu' loss function.
+        This is implementation of 'hebb' loss function.
         Formula: f(m) = max(0, -m)
 
         """
@@ -62,10 +62,41 @@ class _Loss:
 
 
     @staticmethod
-    def grad_relu(x, y, w):
+    def grad_hebb(x, y, w):
         """
         This function calculates gradient vector
-        for 'relu' loss function.
+        for 'hebb' loss function.
+
+        """
+
+        n_features = x.shape[0]
+        margin = np.dot(x, w) * y
+
+        if margin >= 0:
+            return np.zeros(n_features)
+        return x * (-y)
+
+
+    @staticmethod
+    def loss_hinge(x, y, w):
+        """
+        This is implementation of 'hinge' loss function.
+        Formula: f(m) = max(0, 1 - m)
+
+        """
+
+        margin = np.dot(x, w) * y
+
+        if margin >= 1:
+            return 0
+        return 1 - margin
+
+
+    @staticmethod
+    def grad_hinge(x, y, w):
+        """
+        This function calculates gradient vector
+        for 'hinge' loss function.
 
         """
 
@@ -81,11 +112,13 @@ class _Loss:
     def loss_log(x, y, w):
         """
         This is implementation of 'log' loss function.
-        Formula: f(m) = ...
+        Formula: f(m) = log2(1 + e^(-m))
 
         """
 
-        pass
+        margin = np.dot(x, w) * y
+
+        return np.log2(1 + np.exp(-margin))
 
 
     @staticmethod
@@ -96,8 +129,7 @@ class _Loss:
 
         """
 
-        pass
-
+        return -1 / (np.exp(y * x) + 1) / np.log(2)
 
 
 class _MovAvg:

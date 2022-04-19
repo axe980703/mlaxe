@@ -41,10 +41,13 @@ class Sample2D(SampleDisplayMixin):
     cl_size: int (default: 100)
         The size of the class(number of objects per class).
 
+    show: bool (default: True)
+        Whether to show generated sample right after creating.
+
     """
 
     def __init__(self, classes=2, radius=5, mean=0,
-                 stdev=2, seed=322, cl_size=100):
+                 stdev=2, seed=322, cl_size=100, show=True):
         """
         Initializes attributes of the class with
         corresponding values (if specified) from arguments.
@@ -57,6 +60,7 @@ class Sample2D(SampleDisplayMixin):
         self.stdev = stdev
         self.seed = seed
         self.cl_size = cl_size
+        self.show = show
 
 
     def gen(self):
@@ -103,10 +107,11 @@ class Sample2D(SampleDisplayMixin):
             ys = np.repeat(np.arange(self.classes), self.cl_size)
 
         # visualize created sample
-        plt.figure(figsize=(9, 6))
-        self.draw_sample(xs, ys, plt)
-        plt.title(f'Generated sample for {self.classes} classes')
-        plt.legend()
-        plt.show()
+        if self.show:
+            plt.figure(figsize=(7, 5))
+            self.draw_sample(xs, ys, plt)
+            plt.title(f'Generated sample for {self.classes} classes')
+            plt.legend()
+            plt.show()
 
         return xs, ys

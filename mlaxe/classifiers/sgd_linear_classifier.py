@@ -7,7 +7,7 @@ linear decision function.
 import numpy as np
 from mlaxe.standards import BaseLinearClassifier
 from mlaxe.math import _Loss, _MovAvg
-from mlaxe.visual import Animation
+from mlaxe.visual import Animation2D
 
 
 class SGDLinearClassifier(BaseLinearClassifier):
@@ -75,9 +75,10 @@ class SGDLinearClassifier(BaseLinearClassifier):
             Type of moving average to use ('exp' - exponential,
             'mean'- mean) for emperical risk re-calculation.
 
-        loss_func: str (default: 'relu')
+        loss_func: str (default: 'hebb')
             Target loss function, for which we minimize empirical risk.
-            For 'relu', f(x) = max(0, -x) will be used.
+            For 'hebb', f(x) = max(0, -x) will be used.
+            For 'hinge', f(x) = max(0, 1 - x) will be used.
             For 'log', f(x) = log2(1 + e^(-x)) will be used.
 
         """
@@ -94,6 +95,8 @@ class SGDLinearClassifier(BaseLinearClassifier):
         self._seed = seed
         self._weights_hist = []
         self._grad_hist = []
+        self._risk_hist = []
+        self._loss_hist = []
 
         # select functions, corresponding to received parameters
         loss_select, mavg_select = _Loss(loss_func), _MovAvg(mov_avg)
@@ -176,6 +179,8 @@ class SGDLinearClassifier(BaseLinearClassifier):
             if self._save_hist:
                 self._weights_hist.append(w)
                 self._grad_hist.append(grad)
+                self._risk_hist.append(cur_risk)
+                self._loss_hist.append(iter_loss)
 
             # processing stop criterion
             if self._time_to_stop(cur_risk, min_risk):
@@ -376,10 +381,10 @@ class SGDLinearClassifier(BaseLinearClassifier):
 
         """
 
-        anim = Animation(
+        anim = Animation2D(
             sample=(self._xs, self._ys),
-            weights=self._weights_hist,
-            grads=self._grad_hist,
+            weights=self._weights_hist, grads=self._grad_hist,
+            risks=self._risk_hist, losses=self._loss_hist,
             verbose=verbose,
             save_gif=save_gif
         )
