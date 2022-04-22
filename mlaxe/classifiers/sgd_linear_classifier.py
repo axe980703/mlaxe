@@ -6,7 +6,7 @@ linear decision function.
 
 import numpy as np
 from mlaxe.standards import BaseLinearClassifier
-from mlaxe.math import _Loss, _MovAvg
+from mlaxe.math import _Loss, _MovAvg, _Regularizer
 from mlaxe.visual import Animation2D
 
 
@@ -30,10 +30,11 @@ class SGDLinearClassifier(BaseLinearClassifier):
 
     """
 
-    def __init__(self, lr_init=0.006, upd_rate=0.1, max_iter=10000,
-                 loss_eps=1e-5, tol_iter=5, add_bias=True,
+    def __init__(self, lr_init=0.006, upd_rate=0.07, max_iter=10000,
+                 loss_eps=1e-4, tol_iter=5, add_bias=True,
                  save_hist=True, verbose=False, shuffle=False,
-                 mov_avg='exp', loss_func='relu', seed=322):
+                 mov_avg='exp', loss_func='hinge', seed=322,
+                 regul=None, reg_coef=0.001):
         """
         Initializes parameters of the model.
 
@@ -42,14 +43,14 @@ class SGDLinearClassifier(BaseLinearClassifier):
         lr_init: float (default: 0.006)
             Initial learning rate of sgd.
 
-        upd_rate: float (deafult: 0.1)
+        upd_rate: float (deafult: 0.07)
             Update rate of empirical risk on each iteration.
             In interval : 0 <= val <= 1.
 
         max_iter: int (default: 10000)
             Upper bound of maximum number of iterations.
 
-        loss_eps: float (default: 1e-7)
+        loss_eps: float (default: 1e-4)
             Stop criterion. Fitting will be stopped when
             condition: (loss - min_loss <= loss_eps) is true
             for (tol_iter) consecutive iterations.
@@ -75,11 +76,22 @@ class SGDLinearClassifier(BaseLinearClassifier):
             Type of moving average to use ('exp' - exponential,
             'mean'- mean) for emperical risk re-calculation.
 
-        loss_func: str (default: 'hebb')
+        loss_func: str (default: 'hinge')
             Target loss function, for which we minimize empirical risk.
-            For 'hebb', f(x) = max(0, -x) will be used.
-            For 'hinge', f(x) = max(0, 1 - x) will be used.
-            For 'log', f(x) = log2(1 + e^(-x)) will be used.
+            For 'hebb', f(x) = max(0, -x),
+            For 'hinge', f(x) = max(0, 1 - x),
+            For 'log', f(x) = log2(1 + e^(-x)),
+            For 'exp', f(x) = e^(-x),
+            will be used.
+
+        regul: str (default: None)
+            Type of regularization function to use.
+            For 'l1 norm', f(X) = sum(|x_i|), for each i,
+            For 'l2 norm', f(X) = sum(x_i^2), for each i.
+
+        reg_coef: float (default: 0.001)
+            The rate of regularization. The more the value,
+            the less the variance of weights vector.
 
         """
 
@@ -93,6 +105,7 @@ class SGDLinearClassifier(BaseLinearClassifier):
         self._verbose = verbose
         self._shuffle = shuffle
         self._seed = seed
+        self._reg_coef = reg_coef
         self._weights_hist = []
         self._grad_hist = []
         self._risk_hist = []
@@ -100,9 +113,11 @@ class SGDLinearClassifier(BaseLinearClassifier):
 
         # select functions, corresponding to received parameters
         loss_select, mavg_select = _Loss(loss_func), _MovAvg(mov_avg)
+        reg_select = _Regularizer(regul)
         self._update_risk = mavg_select.get_update_func()
         self._loss = loss_select.get_loss_func()
         self._grad = loss_select.get_grad_func()
+        self._regul = reg_select.get_regul_func()
 
 
     def fit(self, x, y):
@@ -143,7 +158,7 @@ class SGDLinearClassifier(BaseLinearClassifier):
         x, y = self._shuffle_objects(x, y)
 
         # init weights with gaussian standard distribution
-        w = self._rand_gen.randn(self._n_features + 1)
+        w = np.ones(self._n_features + 1)
 
 
         # init local variables
@@ -163,11 +178,14 @@ class SGDLinearClassifier(BaseLinearClassifier):
             # calulating loss on current object
             iter_loss = self._loss(x[i], y[i], w)
 
-            # calculating gradient
-            grad = self._grad(x[i], y[i], w)
+            # calculating gradient of loss function
+            loss_grad = self._grad(x[i], y[i], w)
+
+            # calculating regularization gradient
+            reg_grad = self._regul(w, self._reg_coef)
 
             # changing weights according to the gradient value
-            w = w - l_rate * grad
+            w = w - l_rate * (loss_grad + reg_grad)
 
             # updating empirical risk
             cur_risk = self._update_risk(cur_risk, iter_loss, self._upd_rate)
@@ -178,7 +196,7 @@ class SGDLinearClassifier(BaseLinearClassifier):
             # logging fitting's data
             if self._save_hist:
                 self._weights_hist.append(w)
-                self._grad_hist.append(grad)
+                self._grad_hist.append(loss_grad)
                 self._risk_hist.append(cur_risk)
                 self._loss_hist.append(iter_loss)
 

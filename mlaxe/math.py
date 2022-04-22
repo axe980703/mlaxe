@@ -28,22 +28,24 @@ class _Loss:
         ----------
         loss_name: str
             The name of the loss function.
-            The list of valid names: ['hebb', 'hinge', 'log']
+            The list of valid names: ['hebb', 'hinge', 'log', 'exp]
 
         """
 
-        self._loss = getattr(self, f'loss_{loss_name}')
-        self._grad = getattr(self, f'grad_{loss_name}')
+        self.loss = getattr(self, f'loss_{loss_name}')
+        self.grad = getattr(self, f'grad_{loss_name}')
 
 
     def get_loss_func(self):
         """ Getter of loss function """
-        return self._loss
+
+        return self.loss
 
 
     def get_grad_func(self):
         """ Getter of grad function """
-        return self._grad
+
+        return self.grad
 
 
     @staticmethod
@@ -103,7 +105,7 @@ class _Loss:
         n_features = x.shape[0]
         margin = np.dot(x, w) * y
 
-        if margin >= 0:
+        if margin >= 1:
             return np.zeros(n_features)
         return x * (-y)
 
@@ -129,7 +131,9 @@ class _Loss:
 
         """
 
-        return -1 / (np.exp(y * x) + 1) / np.log(2)
+        margin = np.dot(x, w) * y
+
+        return -x * y / (np.exp(margin) + 1) / np.log(2)
 
 
 class _MovAvg:
@@ -154,12 +158,13 @@ class _MovAvg:
 
         """
 
-        self._update_risk = getattr(self, f'update_{mavg_name}')
+        self.update_risk = getattr(self, f'update_{mavg_name}')
 
 
     def get_update_func(self):
         """ Getter of moving average function"""
-        return self._update_risk
+
+        return self.update_risk
 
 
     @staticmethod
@@ -184,3 +189,75 @@ class _MovAvg:
         """
 
         pass
+
+
+class _Regularizer:
+    """
+    This class stores implementations of regularizers.
+    By specifying name of regularizer while creating
+    instance of the class, you will be able to get
+    the function by using 'get_regul_func' method.
+
+    """
+
+    def __init__(self, reg_name):
+        """
+        Initializes class public attributes with
+        static methods, using getattr method.
+
+        Parameters
+        ----------
+        reg_name: str
+            The name of the regularizer.
+            The list of valid names: ['l1', 'l2']
+
+        """
+
+        if reg_name is None:
+            reg_name = 'zero'
+        self.regularizer = getattr(self, f'{reg_name}_norm')
+
+
+    def get_regul_func(self):
+        """ Getter of moving average function"""
+
+        return self.regularizer
+
+
+    @staticmethod
+    def l1_norm(w, tau):
+        """
+        This method calculates the gradient vector
+        for 'l1' norm.
+        Formula of norm: ||w|| = sum(|w_i|), for each i.
+        Formula of gradient: tau * sign(w),
+        where: w - input vector, tau - variance rate.
+
+        """
+
+        return tau * np.sign(w)
+
+
+    @staticmethod
+    def l2_norm(w, tau):
+        """
+        This method calculates the gradient vector
+        for 'l2' norm.
+        Formula of norm: ||w|| = sum(w_i^2), for each i.
+        Formula of gradient: tau * w,
+        where: w - input vector, tau - variance rate.
+
+        """
+
+        return tau * w
+
+
+    @staticmethod
+    def zero_norm(w, tau):
+        """
+        Method which is used when none of the norms
+        is specified. Just returns zero vector.
+
+        """
+
+        return np.zeros(w.shape[0])
