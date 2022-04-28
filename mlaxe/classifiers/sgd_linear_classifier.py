@@ -30,7 +30,7 @@ class SGDLinearClassifier(BaseLinearClassifier):
 
     """
 
-    def __init__(self, lr_init=0.006, upd_rate=0.07, max_iter=10000,
+    def __init__(self, lr_init=0.004, upd_rate=0.07, max_iter=1000,
                  loss_eps=1e-4, tol_iter=5, add_bias=True,
                  save_hist=True, verbose=False, shuffle=False,
                  mov_avg='exp', loss_func='hinge', seed=322,
@@ -40,7 +40,7 @@ class SGDLinearClassifier(BaseLinearClassifier):
 
         Parameters
         ----------
-        lr_init: float (default: 0.006)
+        lr_init: float (default: 0.004)
             Initial learning rate of sgd.
 
         upd_rate: float (deafult: 0.07)
@@ -240,7 +240,7 @@ class SGDLinearClassifier(BaseLinearClassifier):
         if self._add_bias:
             x = np.hstack([x, np.ones((self._n_objects, 1))])
 
-        y = np.sign(np.sum(x * self.weights, axis=1))
+        y = np.sign(np.dot(x, self.weights))
 
         return y
 

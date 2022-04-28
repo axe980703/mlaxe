@@ -4,8 +4,6 @@ which displays process of fitting.
 
 """
 
-from msilib.schema import Error
-from turtle import width
 import numpy as np
 from itertools import cycle
 import matplotlib.pyplot as plt
@@ -41,6 +39,10 @@ class SampleDisplayMixin:
 
         # determine number of classes
         n_classes = np.unique(ys).shape[0]
+
+        # sort by class labels
+        order = np.argsort(ys)
+        xs, ys = xs[order], ys[order]
 
         # initialize color array
         colors = list('bgrcmyk') + ['purple', 'lime', 'olive', 'pink',
