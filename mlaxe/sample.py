@@ -101,10 +101,7 @@ class Sample2D(SampleDisplayMixin):
         xs = (centers + noise * self.stdev + self.mean).reshape(-1, 2)
 
         # create labels for classes
-        if self.classes == 2:
-            ys = np.array([-1] * self.cl_size + [1] * self.cl_size)
-        else:
-            ys = np.repeat(np.arange(self.classes), self.cl_size)
+        ys = np.repeat(np.arange(self.classes), self.cl_size)
 
         # visualize created sample
         if self.show:

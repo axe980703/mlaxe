@@ -23,7 +23,7 @@ class SGDLinearClassifier(BaseLinearClassifier):
     ----------
     weights: numpy-like array
         Vector of coeffitients of linear decision function.
-        Shape of array equal to (n_features + 1,).
+        Shape of array equal to (n_classes, n_features + 1).
 
     iter_spent: int
         Number of iterations spent before convergence.
@@ -106,10 +106,9 @@ class SGDLinearClassifier(BaseLinearClassifier):
         self._shuffle = shuffle
         self._seed = seed
         self._reg_coef = reg_coef
-        self._weights_hist = []
-        self._grad_hist = []
-        self._risk_hist = []
-        self._loss_hist = []
+
+        self.iter_spent = 0
+        self.weights = []
 
         # select functions, corresponding to received parameters
         loss_select, mavg_select = _Loss(loss_func), _MovAvg(mov_avg)
@@ -120,12 +119,10 @@ class SGDLinearClassifier(BaseLinearClassifier):
         self._regul = reg_select.get_regul_func()
 
 
-    def fit(self, x, y):
+    def _fit_binary(self, x, y, class_num):
         """
         Fits linear classifier using Stochastic Gradient Descent.
-        Empirical risk is updating its value by moving average.
-        The partial derivatives for each loss function already
-        specified in _Loss class and stored as _grad attribute.
+        This method only solves binary classification task.
 
         Parameters
         ----------
@@ -135,31 +132,24 @@ class SGDLinearClassifier(BaseLinearClassifier):
         y: 1D numpy-like array
             Label data.
 
+        class_num: int
+            For binary classification it equals to 0.
+            Otherwise it indicates decision function number.
+
         Returns
         ----------
-        self: SGDLinearClassifier
-            The current instance of class.
+        weights: 1D numpy-like array
+            Coefficients of decision function.
 
         """
 
-        # init private attributes
-        self._n_objects = x.shape[0]
-        self._n_features = x.shape[1]
         self._converge_streak = 0
-        self._rand_gen = np.random.RandomState(self._seed)
-
-        if self._save_hist:
-            self._xs, self._ys = x, y
-
-        if self._add_bias:
-            x = np.hstack([x, np.ones((self._n_objects, 1))])
 
         # init shuffle
         x, y = self._shuffle_objects(x, y)
 
         # init weights with gaussian standard distribution
-        w = np.ones(self._n_features + 1)
-
+        w = np.ones(self._n_features + int(self._add_bias))
 
         # init local variables
         iter_step = 0
@@ -193,12 +183,12 @@ class SGDLinearClassifier(BaseLinearClassifier):
             if self._verbose:
                 print(f'loss: {cur_risk}')
 
-            # logging fitting's data
+            # saving history data
             if self._save_hist:
-                self._weights_hist.append(w)
-                self._grad_hist.append(loss_grad)
-                self._risk_hist.append(cur_risk)
-                self._loss_hist.append(iter_loss)
+                self._weig_hist[class_num].append(w)
+                self._grad_hist[class_num].append(loss_grad)
+                self._risk_hist[class_num].append(cur_risk)
+                self._loss_hist[class_num].append(iter_loss)
 
             # processing stop criterion
             if self._time_to_stop(cur_risk, min_risk):
@@ -211,9 +201,71 @@ class SGDLinearClassifier(BaseLinearClassifier):
             min_risk = min(min_risk, cur_risk)
             iter_step += 1
 
-        # saving final weights as an attribute
-        self.weights = w
-        self.iter_spent = iter_step
+        # sum up iteration number
+        self.iter_spent += iter_step
+
+        return w
+
+
+    def fit(self, x, y):
+        """
+        Fits linear classifier using Stochastic Gradient Descent.
+        For multiclass classification One-Versus-All strategy
+        is used.
+
+        Parameters
+        ----------
+        x: 2D numpy-like array
+            Feature data.
+
+        y: 1D numpy-like array
+            Label data.
+
+        Returns
+        ----------
+        self: SGDLinearClassifier
+            The current instance of the classifier.
+
+        """
+
+        self._n_classes = np.unique(y).shape[0]
+
+        # if sample contains two classes, then
+        # we only need one decision function
+        decision_num = self._n_classes - (self._n_classes == 2)
+
+        # init private attributes, for history storing and
+        # other needs
+        self._weig_hist = [[] for _ in range(decision_num)]
+        self._grad_hist = [[] for _ in range(decision_num)]
+        self._risk_hist = [[] for _ in range(decision_num)]
+        self._loss_hist = [[] for _ in range(decision_num)]
+
+        if self._save_hist:
+            self._xs, self._ys = x, y
+
+        # save sample information
+        self._n_objects = x.shape[0]
+        self._n_features = x.shape[1]
+        self._rand_gen = np.random.RandomState(self._seed)
+
+        if self._add_bias:
+            x = np.hstack([x, np.ones((self._n_objects, 1))])
+
+        # choose strategy, depending on binary or
+        # multiclass classification
+        if self._n_classes == 2:
+            y = np.copy(y)
+            y[y == 0] = -1
+            weights = self._fit_binary(x, y, 0)
+            self.weights.append(weights)
+        else:
+            for n_class in range(self._n_classes):
+                yi = np.copy(y)
+                yi[yi == n_class] = 1
+                yi[yi != n_class] = -1
+                weights = self._fit_binary(x, yi, n_class)
+                self.weights.append(weights)
 
         return self
 
@@ -235,12 +287,28 @@ class SGDLinearClassifier(BaseLinearClassifier):
 
         """
 
-        # check if fit was called before, raise error otherwise
+        # check if fit was called before, otherwise raise error
+        ...
 
         if self._add_bias:
             x = np.hstack([x, np.ones((self._n_objects, 1))])
 
-        y = np.sign(np.dot(x, self.weights))
+        # choose strategy, depending on binary or
+        # multiclass classification
+        if self._n_classes == 2:
+            w = self.weights[0]
+            y = np.sign(np.dot(x, w))
+            y[y == -1] = 0
+        else:
+            # adapt shapes to each other
+            x = np.repeat(x, self._n_classes, axis=0)
+            w = np.tile(np.array(self.weights), reps=(self._n_objects, 1))
+
+            # calculate dot product for each object and class
+            dots = np.sum(x * w, axis=1).reshape(-1, self._n_classes)
+
+            # the answer is the class with maximal dot product
+            y = np.argmax(dots, axis=1)
 
         return y
 
@@ -401,7 +469,7 @@ class SGDLinearClassifier(BaseLinearClassifier):
 
         anim = Animation2D(
             sample=(self._xs, self._ys),
-            weights=self._weights_hist, grads=self._grad_hist,
+            weights=self._weig_hist, grads=self._grad_hist,
             risks=self._risk_hist, losses=self._loss_hist,
             verbose=verbose,
             save_gif=save_gif
