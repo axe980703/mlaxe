@@ -232,14 +232,14 @@ class SGDLinearClassifier(BaseLinearClassifier):
 
         # if sample contains two classes, then
         # we only need one decision function
-        decision_num = self._n_classes - (self._n_classes == 2)
+        self._dec_num = self._n_classes - (self._n_classes == 2)
 
         # init private attributes, for history storing and
         # other needs
-        self._weig_hist = [[] for _ in range(decision_num)]
-        self._grad_hist = [[] for _ in range(decision_num)]
-        self._risk_hist = [[] for _ in range(decision_num)]
-        self._loss_hist = [[] for _ in range(decision_num)]
+        self._weig_hist = [[] for _ in range(self._dec_num)]
+        self._grad_hist = [[] for _ in range(self._dec_num)]
+        self._risk_hist = [[] for _ in range(self._dec_num)]
+        self._loss_hist = [[] for _ in range(self._dec_num)]
 
         if self._save_hist:
             self._xs, self._ys = x, y
@@ -468,7 +468,7 @@ class SGDLinearClassifier(BaseLinearClassifier):
         """
 
         anim = Animation2D(
-            sample=(self._xs, self._ys),
+            sample=(self._xs, self._ys), class_num=self._dec_num,
             weights=self._weig_hist, grads=self._grad_hist,
             risks=self._risk_hist, losses=self._loss_hist,
             verbose=verbose,

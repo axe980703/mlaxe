@@ -4,10 +4,13 @@ which displays process of fitting.
 
 """
 
+from ipaddress import v4_int_to_packed
 import numpy as np
 from itertools import cycle
 import matplotlib.pyplot as plt
 from matplotlib import animation, rc
+from sklearn.tree import export_graphviz
+from mlaxe.standards import Config
 
 
 class SampleDisplayMixin:
@@ -45,8 +48,7 @@ class SampleDisplayMixin:
         xs, ys = xs[order], ys[order]
 
         # initialize color array
-        colors = list('bgrcmyk') + ['purple', 'lime', 'olive', 'pink',
-                                    'coral', 'indigo', 'gold', 'chocolate']
+        colors = Config().colors
 
         # cycle array of colors
         cycler = cycle(colors)
@@ -119,7 +121,7 @@ class Animation2D(SampleDisplayMixin):
     """
 
     def __init__(self, sample, weights, grads, losses,
-                 risks, save_gif=False, verbose=False):
+                 risks, class_num, save_gif=False, verbose=False):
         """
         Initializes attributes of the class with
         corresponding values (if specified) from arguments.
@@ -133,19 +135,22 @@ class Animation2D(SampleDisplayMixin):
         self.losses = losses
         self.verbose = verbose
         self.save_gif = save_gif
+        self.class_num = class_num
 
         # setup plotting parameters
         self.congif()
 
 
     def congif(self):
-        """ Setting up all necessary objects for plotting """
+        """ Setting up all necessary staff for plotting """
 
         rc('animation', html='html5')
 
         # setting constants
         self.WEIGHT_PRECISION = 3
         self.LOSS_PRECISION = 5
+
+        self.colors = Config().colors
 
         # creating subplots and grid
         self.fig, (self.ax1, self.ax2) = plt.subplots(
@@ -156,28 +161,38 @@ class Animation2D(SampleDisplayMixin):
         # calculating limits for hyperplane grid
         xl, xr = np.min(self.xs[:, 0]), np.max(self.xs[:, 0])
         self.hyp_grid = np.linspace(xl - 1, xr + 1, 5)
-        self.risk_grid = np.arange(1, len(self.risks) + 1)
+
+        n_epoch = len(self.risks)
+        self.risk_grid = np.arange(1, n_epoch + 1)
 
         # setting limits
         self.ax2.set_xlim(1, len(self.risks) + 1)
         self.ax2.set_ylim(-0.2, max(self.risks) + 0.1)
 
         # saving frames count and initializing iterations count
-        self.n_frames = len(self.weights)
         self.iter = 0
+        self.n_frames = sum([len(w) for w in self.weights])
+        self.cur_class = 0
 
 
     def pre_anim(self):
         """ The method which is called before animating. """
 
         # plotting lower bound of loss
-        x_lower = np.linspace(*self.ax2.get_xlim(), 5)
-        self.ax2.plot(x_lower, np.zeros(x_lower.shape[0]), lw=0.5)
+        bound_grid = np.linspace(*self.ax2.get_xlim(), 5)
+        self.ax2.plot(bound_grid, np.zeros(bound_grid.shape[0]), lw=0.5)
 
-        # creating objects for hyperplane, risk_graph and text
-        self.hyper_plane = self.ax1.plot([], [], lw=2, color='black')[0]
-        self.hyper_plane.set_xdata(self.hyp_grid)
+        # plotting and tracking hyperplane objects
+        self.hyper_plane = []
 
+        for n_class in self.class_num:
+            # use black color for plane if it's binary classification
+            color = self.colors[n_class] if self.class_num > 2 else 'k'
+            plane = self.ax1.plot([], [], lw=2, color=color)[0]
+            self.hyper_plane.append(plane)
+            self.hyper_plane[-1].set_xdata(self.hyp_grid)
+
+        # plotting and tracking text and risk graph objects
         bbox_style = dict(facecolor='black', fill=False)
 
         self.grad_text = self.ax1.text(
@@ -200,11 +215,11 @@ class Animation2D(SampleDisplayMixin):
 
         self.risk_graph = self.ax2.plot([], [], lw=1, color='black')[0]
 
-        return (self.hyper_plane, self.grad_text, self.weig_text,
+        return (*self.hyper_plane, self.grad_text, self.weig_text,
                 self.risk_text, self.risk_graph)
 
 
-    def animate(self, i: int):
+    def animate(self, i):
         """
         The method which is called to render each frame
         of animation.
@@ -266,16 +281,15 @@ class Animation2D(SampleDisplayMixin):
 
         """
 
-        # creating the instance of FuncAnimation
-        # using optimal parameters
-        anim = animation.FuncAnimation(
-            self.fig, self.animate,
-            interval=20, frames=self.n_frames,
-            repeat=False, blit=True, init_func=self.pre_anim
-        )
-
         # plot sample
         self.draw_sample(self.xs, self.ys, self.ax1)
+
+        # creating the animation
+        anim = animation.FuncAnimation(
+            self.fig, self.animate, init_func=self.pre_anim,
+            interval=10, frames=self.n_frames,
+            repeat=False, blit=True
+        )
 
         # set titles
         self.ax1.set_title('Process of fitting')
