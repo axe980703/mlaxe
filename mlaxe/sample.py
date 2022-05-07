@@ -47,7 +47,8 @@ class Sample2D(SampleDisplayMixin):
     """
 
     def __init__(self, classes=2, radius=5, mean=0,
-                 stdev=2, seed=322, cl_size=100, show=True):
+                 stdev=2, seed=322, cl_size=100, show=True,
+                 standard=True):
         """
         Initializes attributes of the class with
         corresponding values (if specified) from arguments.
@@ -61,6 +62,7 @@ class Sample2D(SampleDisplayMixin):
         self.seed = seed
         self.cl_size = cl_size
         self.show = show
+        self.standard = standard
 
 
     def gen(self):
@@ -100,6 +102,9 @@ class Sample2D(SampleDisplayMixin):
         # form sample and then add dispersion and bias to it.
         xs = (centers + noise * self.stdev + self.mean).reshape(-1, 2)
 
+        if self.standard:
+            xs = self.standardize(xs)
+
         # create labels for classes
         ys = np.repeat(np.arange(self.classes), self.cl_size)
 
@@ -112,3 +117,10 @@ class Sample2D(SampleDisplayMixin):
             plt.show()
 
         return xs, ys
+
+
+    @staticmethod
+    def standardize(a):
+        means = a.mean(axis=0)
+        stds = a.std(axis=0)
+        return (a - means) / stds

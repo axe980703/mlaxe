@@ -4,12 +4,10 @@ which displays process of fitting.
 
 """
 
-from ipaddress import v4_int_to_packed
 import numpy as np
 from itertools import cycle
 import matplotlib.pyplot as plt
 from matplotlib import animation, rc
-from sklearn.tree import export_graphviz
 from mlaxe.standards import Config
 
 
@@ -162,16 +160,10 @@ class Animation2D(SampleDisplayMixin):
         xl, xr = np.min(self.xs[:, 0]), np.max(self.xs[:, 0])
         self.hyp_grid = np.linspace(xl - 1, xr + 1, 5)
 
-        n_epoch = len(self.risks)
-        self.risk_grid = np.arange(1, n_epoch + 1)
-
-        # setting limits
-        self.ax2.set_xlim(1, len(self.risks) + 1)
-        self.ax2.set_ylim(-0.2, max(self.risks) + 0.1)
-
         # saving frames count and initializing iterations count
-        self.iter = 0
-        self.n_frames = sum([len(w) for w in self.weights])
+        self.iter_class = 0
+        self.iter_count = [len(w) for w in reversed(self.weights)]
+        self.n_frames = sum(self.iter_count)
         self.cur_class = 0
 
 
@@ -185,12 +177,11 @@ class Animation2D(SampleDisplayMixin):
         # plotting and tracking hyperplane objects
         self.hyper_plane = []
 
-        for n_class in self.class_num:
+        for n_class in range(self.class_num):
             # use black color for plane if it's binary classification
             color = self.colors[n_class] if self.class_num > 2 else 'k'
             plane = self.ax1.plot([], [], lw=2, color=color)[0]
             self.hyper_plane.append(plane)
-            self.hyper_plane[-1].set_xdata(self.hyp_grid)
 
         # plotting and tracking text and risk graph objects
         bbox_style = dict(facecolor='black', fill=False)
@@ -215,40 +206,57 @@ class Animation2D(SampleDisplayMixin):
 
         self.risk_graph = self.ax2.plot([], [], lw=1, color='black')[0]
 
-        return (*self.hyper_plane, self.grad_text, self.weig_text,
-                self.risk_text, self.risk_graph)
+        # TEMP
+        self.ax2.set_xlim(1, len(self.risks[0]))
+        self.ax2.set_ylim(-0.2, 5)
+
+        return (self.weig_text, self.grad_text, self.risk_text,
+                *self.hyper_plane, self.risk_graph)
 
 
-    def animate(self, i):
+    def animate(self, iter):
         """
         The method which is called to render each frame
         of animation.
 
         Parameters
         ----------
-        i: int
+        iter: int
             Iteration (frame) number.
 
         """
 
+        # dealing with class transitions
+        if self.iter_class == 0:
+            # setting risk grid
+            risks = self.risks[self.cur_class]
+            self.risk_grid = np.arange(1, len(risks) + 1)
+
+            # setting limits
+            # self.ax2.set_xlim(1, len(risks) + 1)
+            # self.ax2.set_ylim(-0.2, max(risks) + 0.1)
+
+            # setting grid
+            self.hyper_plane[self.cur_class].set_xdata(self.hyp_grid)
+
         # getting simple links to variables
-        w = self.weights[i]
-        g = self.grads[i]
-        loss = self.losses[i]
-        risk = self.risks[i]
+        cls = self.cur_class
+        i = self.iter_class
+
+        w = self.weights[cls][i]
+        g = self.grads[cls][i]
+        loss = self.losses[cls][i]
+        risk = self.risks[cls][i]
 
         # getting the abscissas grid
         x = self.hyp_grid
 
-        # calculating the ordinate of decision function
+        # calculating the ordinates of decision function
         y = (w[2] + w[0] * x) / -w[1]
 
-        # printing and updating status of animation
-        self.iter += 1
-
-        if self.iter <= self.n_frames:
-            status = f'Animating {self.iter / self.n_frames * 100:.2f}%'
-            print(status + '\r', end='')
+        # showing status of animation
+        status = f'Animating {(iter + 1) / self.n_frames * 100:.2f}%'
+        print(status + '\r', end='')
 
         # formatting and displaying text
         w_prec = self.WEIGHT_PRECISION
@@ -265,14 +273,21 @@ class Animation2D(SampleDisplayMixin):
         self.weig_text.set_text(info_weig)
         self.grad_text.set_text(info_grad)
         self.risk_text.set_text(info_risk)
-        self.hyper_plane.set_ydata(y)
+        self.hyper_plane[cls].set_ydata(y)
 
         # updating risk graph
         self.risk_graph.set_xdata(self.risk_grid[:i + 1])
-        self.risk_graph.set_ydata(self.risks[:i + 1])
+        self.risk_graph.set_ydata(self.risks[cls][:i + 1])
 
-        return (self.weig_text, self.grad_text, self.risk_text,
-                self.hyper_plane, self.risk_graph)
+        # updating iteration count
+        self.iter_class += 1
+        if self.iter_class == self.iter_count[-1]:
+            self.iter_count.pop()
+            self.cur_class += 1
+            self.iter_class = 0
+
+        return (*self.hyper_plane, self.risk_graph, self.weig_text,
+                self.grad_text, self.risk_text)
 
 
     def build_animation(self):
@@ -287,7 +302,7 @@ class Animation2D(SampleDisplayMixin):
         # creating the animation
         anim = animation.FuncAnimation(
             self.fig, self.animate, init_func=self.pre_anim,
-            interval=10, frames=self.n_frames,
+            interval=2, frames=self.n_frames,
             repeat=False, blit=True
         )
 

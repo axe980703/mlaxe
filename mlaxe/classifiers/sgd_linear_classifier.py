@@ -30,7 +30,7 @@ class SGDLinearClassifier(BaseLinearClassifier):
 
     """
 
-    def __init__(self, lr_init=0.004, upd_rate=0.07, max_iter=1000,
+    def __init__(self, lr_init=0.01, upd_rate=0.02, max_iter=1000,
                  loss_eps=1e-4, tol_iter=5, add_bias=True,
                  save_hist=True, verbose=False, shuffle=False,
                  mov_avg='exp', loss_func='hinge', seed=322,
@@ -40,7 +40,7 @@ class SGDLinearClassifier(BaseLinearClassifier):
 
         Parameters
         ----------
-        lr_init: float (default: 0.004)
+        lr_init: float (default: 0.01)
             Initial learning rate of sgd.
 
         upd_rate: float (deafult: 0.07)
@@ -149,7 +149,7 @@ class SGDLinearClassifier(BaseLinearClassifier):
         x, y = self._shuffle_objects(x, y)
 
         # init weights with gaussian standard distribution
-        w = np.ones(self._n_features + int(self._add_bias))
+        w = self._rand_gen.randn(self._n_features + int(self._add_bias))
 
         # init local variables
         iter_step = 0
@@ -202,7 +202,7 @@ class SGDLinearClassifier(BaseLinearClassifier):
             iter_step += 1
 
         # sum up iteration number
-        self.iter_spent += iter_step
+        self.iter_spent += iter_step + 1
 
         return w
 
@@ -262,8 +262,8 @@ class SGDLinearClassifier(BaseLinearClassifier):
         else:
             for n_class in range(self._n_classes):
                 yi = np.copy(y)
-                yi[yi == n_class] = 1
-                yi[yi != n_class] = -1
+                mask_eq, mask_neq = (yi == n_class, yi != n_class)
+                yi[mask_eq], yi[mask_neq] = 1, -1
                 weights = self._fit_binary(x, yi, n_class)
                 self.weights.append(weights)
 
@@ -290,8 +290,10 @@ class SGDLinearClassifier(BaseLinearClassifier):
         # check if fit was called before, otherwise raise error
         ...
 
+        n_objects = x.shape[0]
+
         if self._add_bias:
-            x = np.hstack([x, np.ones((self._n_objects, 1))])
+            x = np.hstack([x, np.ones((n_objects, 1))])
 
         # choose strategy, depending on binary or
         # multiclass classification
@@ -302,7 +304,7 @@ class SGDLinearClassifier(BaseLinearClassifier):
         else:
             # adapt shapes to each other
             x = np.repeat(x, self._n_classes, axis=0)
-            w = np.tile(np.array(self.weights), reps=(self._n_objects, 1))
+            w = np.tile(np.array(self.weights), reps=(n_objects, 1))
 
             # calculate dot product for each object and class
             dots = np.sum(x * w, axis=1).reshape(-1, self._n_classes)
