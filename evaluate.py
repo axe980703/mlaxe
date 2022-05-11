@@ -7,7 +7,6 @@ x, y = Sample2D(classes=3, radius=12, mean=2, show=False,
 
 cls = SGDLinearClassifier(seed=2).fit(x, y)
 print(cls.evaluate(x, y))
-
 cls.get_anim(save_gif=False)
 
 print(cls.iter_spent)

@@ -170,10 +170,6 @@ class Animation2D(SampleDisplayMixin):
     def pre_anim(self):
         """ The method which is called before animating. """
 
-        # plotting lower bound of loss
-        bound_grid = np.linspace(*self.ax2.get_xlim(), 5)
-        self.ax2.plot(bound_grid, np.zeros(bound_grid.shape[0]), lw=0.5)
-
         # plotting and tracking hyperplane objects
         self.hyper_plane = []
 
@@ -206,12 +202,10 @@ class Animation2D(SampleDisplayMixin):
 
         self.risk_graph = self.ax2.plot([], [], lw=1, color='black')[0]
 
-        # TEMP
-        self.ax2.set_xlim(1, len(self.risks[0]))
-        self.ax2.set_ylim(-0.2, 5)
+        self.loss_bound = self.ax2.plot([], [], lw=0.5, color='green')[0]
 
         return (self.weig_text, self.grad_text, self.risk_text,
-                *self.hyper_plane, self.risk_graph)
+                *self.hyper_plane, self.loss_bound, self.risk_graph)
 
 
     def animate(self, iter):
@@ -228,13 +222,21 @@ class Animation2D(SampleDisplayMixin):
 
         # dealing with class transitions
         if self.iter_class == 0:
+
             # setting risk grid
             risks = self.risks[self.cur_class]
             self.risk_grid = np.arange(1, len(risks) + 1)
 
             # setting limits
-            # self.ax2.set_xlim(1, len(risks) + 1)
-            # self.ax2.set_ylim(-0.2, max(risks) + 0.1)
+            self.ax2.set_xlim(1, len(risks) + 1)
+            self.ax2.set_ylim(-0.2, max(risks) + 0.1)
+
+            # updating loss bound grid
+            bound_grid = np.linspace(*self.ax2.get_xlim(), 3)
+            self.loss_bound.set_data(bound_grid, np.zeros(3))
+
+            # redrawing canvas to update ticks
+            self.fig.canvas.draw_idle()
 
             # setting grid
             self.hyper_plane[self.cur_class].set_xdata(self.hyp_grid)
@@ -286,8 +288,8 @@ class Animation2D(SampleDisplayMixin):
             self.cur_class += 1
             self.iter_class = 0
 
-        return (*self.hyper_plane, self.risk_graph, self.weig_text,
-                self.grad_text, self.risk_text)
+        return (*self.hyper_plane, self.risk_graph, self.loss_bound,
+                self.weig_text, self.grad_text, self.risk_text)
 
 
     def build_animation(self):

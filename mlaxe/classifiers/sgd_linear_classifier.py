@@ -30,8 +30,8 @@ class SGDLinearClassifier(BaseLinearClassifier):
 
     """
 
-    def __init__(self, lr_init=0.01, upd_rate=0.02, max_iter=1000,
-                 loss_eps=1e-4, tol_iter=5, add_bias=True,
+    def __init__(self, lr_init=0.01, upd_rate=0.01, max_iter=750,
+                 loss_eps=1e-3, tol_iter=4, add_bias=True,
                  save_hist=True, verbose=False, shuffle=False,
                  mov_avg='exp', loss_func='hinge', seed=322,
                  regul=None, reg_coef=0.001):
