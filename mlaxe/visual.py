@@ -158,7 +158,7 @@ class Animation2D(SampleDisplayMixin):
 
         # calculating limits for hyperplane grid
         xl, xr = np.min(self.xs[:, 0]), np.max(self.xs[:, 0])
-        self.hyp_grid = np.linspace(xl - 1, xr + 1, 5)
+        self.hyp_grid = np.linspace(xl - 1, xr + 1, 3)
 
         # saving frames count and initializing iterations count
         self.iter_class = 0
@@ -180,32 +180,29 @@ class Animation2D(SampleDisplayMixin):
             self.hyper_plane.append(plane)
 
         # plotting and tracking text and risk graph objects
-        bbox_style = dict(facecolor='black', fill=False)
+        bbox_style = dict(facecolor='white', edgecolor='brown')
+
+        text_style = dict(
+            verticalalignment='bottom', horizontalalignment='center',
+            color='brown', fontsize=7, bbox=bbox_style
+        )
 
         self.grad_text = self.ax1.text(
-            0.1, 0.01, '', verticalalignment='bottom',
-            horizontalalignment='center', transform=self.ax1.transAxes,
-            color='brown', fontsize=9, bbox=bbox_style
+            0.1, 0.01, '', transform=self.ax1.transAxes, **text_style
         )
 
         self.weig_text = self.ax1.text(
-            0.9, 0.01, '', verticalalignment='bottom',
-            horizontalalignment='center', transform=self.ax1.transAxes,
-            color='brown', fontsize=9, bbox=bbox_style
+            0.9, 0.01, '', transform=self.ax1.transAxes, **text_style
         )
 
         self.risk_text = self.ax2.text(
-            0.85, 0.9, '', verticalalignment='center',
-            horizontalalignment='center', transform=self.ax2.transAxes,
-            color='brown', fontsize=9, bbox=bbox_style
+            0.85, 0.83, '', transform=self.ax2.transAxes, **text_style
         )
 
         self.risk_graph = self.ax2.plot([], [], lw=1, color='black')[0]
 
-        self.loss_bound = self.ax2.plot([], [], lw=0.5, color='green')[0]
-
         return (self.weig_text, self.grad_text, self.risk_text,
-                *self.hyper_plane, self.loss_bound, self.risk_graph)
+                *self.hyper_plane, self.risk_graph)
 
 
     def animate(self, iter):
@@ -230,10 +227,6 @@ class Animation2D(SampleDisplayMixin):
             # setting limits
             self.ax2.set_xlim(1, len(risks) + 1)
             self.ax2.set_ylim(-0.2, max(risks) + 0.1)
-
-            # updating loss bound grid
-            bound_grid = np.linspace(*self.ax2.get_xlim(), 3)
-            self.loss_bound.set_data(bound_grid, np.zeros(3))
 
             # redrawing canvas to update ticks
             self.fig.canvas.draw_idle()
@@ -288,7 +281,7 @@ class Animation2D(SampleDisplayMixin):
             self.cur_class += 1
             self.iter_class = 0
 
-        return (*self.hyper_plane, self.risk_graph, self.loss_bound,
+        return (*self.hyper_plane, self.risk_graph,
                 self.weig_text, self.grad_text, self.risk_text)
 
 
@@ -301,18 +294,17 @@ class Animation2D(SampleDisplayMixin):
         # plot sample
         self.draw_sample(self.xs, self.ys, self.ax1)
 
+        # set titles
+        self.ax1.set_title('Process of fitting')
+        self.ax1.legend(prop={'size': 7})
+        self.ax2.set_title('Empirical risk graph')
+
         # creating the animation
         anim = animation.FuncAnimation(
             self.fig, self.animate, init_func=self.pre_anim,
-            interval=2, frames=self.n_frames,
+            interval=0, frames=self.n_frames,
             repeat=False, blit=True
         )
-
-        # set titles
-        self.ax1.set_title('Process of fitting')
-        self.ax1.legend(loc='upper right')
-
-        self.ax2.set_title('Empirical risk graph')
 
         # zooming limits of plot
         self.zoom_axes(self.ax1, 1.2)
