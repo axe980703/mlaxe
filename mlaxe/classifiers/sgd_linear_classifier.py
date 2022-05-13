@@ -32,9 +32,9 @@ class SGDLinearClassifier(BaseLinearClassifier):
 
     def __init__(self, lr_init=0.01, upd_rate=0.01, max_iter=750,
                  loss_eps=1e-3, tol_iter=4, add_bias=True,
-                 save_hist=True, verbose=False, shuffle=False,
+                 save_hist=True, shuffle=False, alt_class=False,
                  mov_avg='exp', loss_func='hinge', seed=322,
-                 regul=None, reg_coef=0.001):
+                 regul=None, reg_coef=0.001, decr_lrate=False):
         """
         Initializes parameters of the model.
 
@@ -66,9 +66,6 @@ class SGDLinearClassifier(BaseLinearClassifier):
             Whether to log all weights and gradients states
             during fitting or not.
 
-        verbose: bool (default: False)
-            Whether to print out the process of fitting or not.
-
         shuffle: bool (default: False)
             Whether to shuffle feature data after each iteration or not.
 
@@ -93,6 +90,14 @@ class SGDLinearClassifier(BaseLinearClassifier):
             The rate of regularization. The more the value,
             the less the variance of weights vector.
 
+        alt_class: bool (default: False)
+            Whether to alternate classes while fitting.
+            Objects inside class are chosen equiprobably.
+
+        decr_lrate: bool (default: False)
+            Updates learning rate on each iteration.
+            Inversely proportional to the number of iteration.
+
         """
 
         self._lr_init = lr_init
@@ -102,10 +107,12 @@ class SGDLinearClassifier(BaseLinearClassifier):
         self._tol_iter = tol_iter
         self._add_bias = add_bias
         self._save_hist = save_hist
-        self._verbose = verbose
         self._shuffle = shuffle
         self._seed = seed
         self._reg_coef = reg_coef
+        self._alt_class = alt_class
+        self._loss_func = loss_func
+        self._decr_lrate = decr_lrate
 
         self.iter_spent = 0
         self.weights = []
@@ -145,28 +152,63 @@ class SGDLinearClassifier(BaseLinearClassifier):
 
         self._converge_streak = 0
 
-        # init shuffle
-        x, y = self._shuffle_objects(x, y)
+        if self._alt_class:
+            # separate objects of two classes
+            sort_ord = np.argsort(y)
+            x, y = x[sort_ord], y[sort_ord]
+
+            # set bounds for classes
+            cl1_size = y[y == -1].shape[0]
+            bounds = [(0, cl1_size), (cl1_size, self._n_objects)]
+        else:
+            # init shuffle
+            x, y = self._shuffle_objects(x, y)
 
         # init weights with gaussian standard distribution
         w = self._rand_gen.randn(self._n_features + int(self._add_bias))
 
         # init local variables
         iter_step = 0
+        cur_class = 0
         min_risk = cur_risk = self._empirical_risk(x, y, w)
         l_rate = self._lr_init
+
+        # set threshold if loss_func is appropriate
+        threshold = None
+        if self._loss_func in ['hinge', 'hebb']:
+            threshold = 1 if self._loss_func == 'hinge' else 0
 
 
         while iter_step < self._max_iter:
 
+            # shuffling the whole sample
             if self._shuffle:
                 x, y = self._shuffle_objects(x, y)
 
             # picking random index for current object
-            i = self._rand_gen.randint(0, self._n_objects)
+            if self._alt_class:
+                i = self._rand_gen.randint(*bounds[cur_class])
+                cur_class ^= 1
+            else:
+                i = self._rand_gen.randint(0, self._n_objects)
 
             # calulating loss on current object
             iter_loss = self._loss(x[i], y[i], w)
+
+            # updating empirical risk
+            cur_risk = self._update_risk(cur_risk, iter_loss, self._upd_rate)
+
+            # processing stop criterion
+            if self._time_to_stop(cur_risk, min_risk):
+                break
+
+            min_risk = min(min_risk, cur_risk)
+
+            # heuristic: skip object if margin is good
+            if threshold is not None:
+                margin = np.dot(x[i], w) * y[i]
+                if margin >= threshold:
+                    continue
 
             # calculating gradient of loss function
             loss_grad = self._grad(x[i], y[i], w)
@@ -177,12 +219,6 @@ class SGDLinearClassifier(BaseLinearClassifier):
             # changing weights according to the gradient value
             w = w - l_rate * (loss_grad + reg_grad)
 
-            # updating empirical risk
-            cur_risk = self._update_risk(cur_risk, iter_loss, self._upd_rate)
-
-            if self._verbose:
-                print(f'loss: {cur_risk}')
-
             # saving history data
             if self._save_hist:
                 self._weig_hist[class_num].append(w)
@@ -190,15 +226,11 @@ class SGDLinearClassifier(BaseLinearClassifier):
                 self._risk_hist[class_num].append(cur_risk)
                 self._loss_hist[class_num].append(iter_loss)
 
-            # processing stop criterion
-            if self._time_to_stop(cur_risk, min_risk):
-                break
-
             # changing learning rate
-            # l_rate = self._update_l_rate(l_rate, iter_step)
+            if self._decr_lrate:
+                l_rate = self._update_l_rate(l_rate, iter_step)
 
-            # updating iteration's variables
-            min_risk = min(min_risk, cur_risk)
+            # updating iteration number
             iter_step += 1
 
         # sum up iteration number
@@ -450,7 +482,7 @@ class SGDLinearClassifier(BaseLinearClassifier):
 
         """
 
-        next_lr = min(l_rate, 1 / (1 + iter_step))
+        next_lr = min(l_rate, 2 / (1 + iter_step))
 
         return next_lr
 
