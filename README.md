@@ -1,6 +1,8 @@
 # mlaxe
 Machine Learning library with visualization support
 
-<img src="animations/binary.gif" width="700" alt="SGD Linear Classifier (2 classes)">
+SGD Linear Classifier (2 classes):
+<img src="animations/binary.gif" width="700" alt="anim1">
 
-<img src="animations/3classes.gif" width="700" alt="SGD Linear Classifier (3 classes)">
+SGD Linear Classifier (3 classes):
+<img src="animations/3classes.gif" width="700" alt="anim2">
